@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Santa Cruz Metro ETA API
+  description: An API that is used to get the estimated time for the next bus arrival. Mainly used for UCSC students.
+  version: 1.0.0
+paths:
+  /estimatedTime/:stopId:
+    parameters:
+      - in: path
+        name: stopId
+        required: true
+        schema:
+          type: string
+        description: The stop ID of the bus stop
+      - name: busNumber
+        in: query
+        description: The bus number
+        required: false
+        schema:
+          type: integer
+          minimum: 10
+          maximum: 20
+          example: 18
+    get:
+      summary: Get the estimated time for the next bus arrival given the stop ID. The type of bus can be specified, but is optional.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstimatedTime'
+
+components:
+    schemas:
+        EstimatedTime:
+          type: object
+          properties:
+            stopId:
+              type: string
+              description: The stop ID of the bus stop
+            busNumber:
+              type: integer
+              description: The bus number
+            estimatedTime:
+              type: string
+              format: date-time
+              description: The estimated time for the next bus arrival
+              example: 10:00 AM
