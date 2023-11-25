@@ -129,7 +129,7 @@ function test(stopCode: string, busCode: string) {
   fs.writeFileSync('./currFormerLine.json', JSON.stringify(currFormerLine));
 
   const isComingShortly = turf.booleanPointOnLine(busLocation, currFormerLine, {
-    epsilon: 0.001,
+    epsilon: 0.0001,
   });
   console.log('Is the bus coming shortly?', isComingShortly);
 
@@ -147,7 +147,7 @@ function test(stopCode: string, busCode: string) {
   fs.writeFileSync('./prevFormerLine.json', JSON.stringify(prevFormerLine));
 
   const isComingSoon = turf.booleanPointOnLine(busLocation, prevFormerLine, {
-    epsilon: 0.001,
+    epsilon: 0.0001,
   });
   console.log('Is the bus coming soon?', isComingSoon);
 
@@ -165,12 +165,12 @@ function test(stopCode: string, busCode: string) {
   fs.writeFileSync('./threeFormerLine.json', JSON.stringify(threeFormerLine));
 
   const isComing = turf.booleanPointOnLine(busLocation, threeFormerLine, {
-    epsilon: 0.001,
+    epsilon: 0.0001,
   });
   console.log('Is the bus coming?', isComing);
 }
 
-test('1615', '18');
+test('1615', '20');
 
 const db = openDb(config);
 const shapes = getShapesAsGeoJSON({
