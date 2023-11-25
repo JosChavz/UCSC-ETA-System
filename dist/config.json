@@ -1,0 +1,14 @@
+{
+    "agencies": [
+        {
+            "agency_key": "scmetro",
+            "url": "https://scmtd.com/google_transit/google_transit.zip",
+            "realtimeUrls": [
+                "https://rt.scmetro.org/gtfsrt/vehicles",
+                "https://rt.scmetro.org/gtfsrt/trips",
+                "https://rt.scmetro.org/gtfsrt/alerts"
+            ]
+        }
+    ],
+    "sqlitePath": "./data.db"
+}

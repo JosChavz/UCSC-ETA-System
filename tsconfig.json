@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+//     "lib": ["dom", "es2016"],
+     "sourceMap": true,
+     "outDir": "./dist",
+     "rootDir": "./src",
+     "moduleResolution": "node",
+     "resolveJsonModule": true,
+     "noUnusedLocals": true,
+     "noUnusedParameters": true,
+     "noImplicitReturns": true,
+     "noFallthroughCasesInSwitch": true
+  },
+    "include": ["src/**/*", "src/**/*.json"],
+}
