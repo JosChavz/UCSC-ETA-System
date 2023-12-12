@@ -4,7 +4,6 @@ import {
   openDb,
   getShapes,
   getStoptimes,
-  getShapesAsGeoJSON,
 } from 'gtfs';
 import * as turf from '@turf/turf';
 
@@ -16,6 +15,7 @@ import {
   Stoptime,
 } from './types';
 import * as fs from 'fs';
+import {stopsAwayFromDestination} from "./helpers";
 
 
 let config = undefined;
@@ -27,6 +27,7 @@ try {
   console.error('Error reading the file:', error);
 }
 
+// @ts-ignore
 function test(stopCode: string, busCode: string) {
   let config = undefined;
 
@@ -122,6 +123,30 @@ function test(stopCode: string, busCode: string) {
       rangeStops[0].stop_lon,
       rangeStops[0].stop_lat,
     ]);
+
+    const expandWidth = 6;
+
+    // Checks to see if the bus is between the first stop and last stop
+    const lastStopLocation = turf.point([
+      rangeStops[5].stop_lon,
+      rangeStops[5].stop_lat,
+    ]);
+
+    const currToLastLine = turf.lineSlice(
+      currStopLocation,
+      lastStopLocation,
+      busTurfLine
+    );
+
+    const currToLastBuffer = turf.buffer(currToLastLine, expandWidth, { units: 'feet' });
+
+    const isWithinRange = turf.booleanPointInPolygon(busLocation, currToLastBuffer);
+
+    if (!isWithinRange) {
+      console.log("This bus is not within the range of the first and last stop. Skipping...\n");
+      return;
+    }
+
     const prevStopLocation = turf.point([
       rangeStops[1].stop_lon,
       rangeStops[1].stop_lat,
@@ -132,8 +157,6 @@ function test(stopCode: string, busCode: string) {
       busTurfLine
     );
     fs.writeFileSync('./currFormerLine.json', JSON.stringify(currFormerLine));
-
-    const expandWidth = 6;
 
     // Convert line to polygon
     const currFormerBuffer = turf.buffer(currFormerLine, expandWidth, { units: 'feet' });
@@ -181,13 +204,8 @@ function test(stopCode: string, busCode: string) {
 
 }
 
-test('1615', '18');
+await stopsAwayFromDestination('1615', '18');
 
 const db = openDb(config);
-const shapes = getShapesAsGeoJSON({
-  shape_id: 'shp-10-02',
-});
-// Store in a JSON file
-fs.writeFileSync('./shapes.json', JSON.stringify(shapes));
 
 closeDb(db);
