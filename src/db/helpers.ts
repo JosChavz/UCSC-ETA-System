@@ -1,44 +1,17 @@
-import {closeDb, getShapes, getStops, getStopsAsGeoJSON, getStoptimes, getStopTimesUpdates, openDb} from "gtfs";
-import {Bus, Shape, Stop, StopCombination, Stoptime} from "../types";
-import * as turf from "@turf/turf";
 import fs from "fs";
-import {Feature, LineString, Point} from "@turf/turf";
+import path from "path";
+import { closeDb, getShapes, getStops, getStoptimes, getStopTimesUpdates, openDb } from "gtfs";
+import { Bus, Shape, Stop, StopCombination, Stoptime } from "../types";
+import { Feature, LineString, Point } from "@turf/turf";
+import * as turf from "@turf/turf";
 
 let config: any = undefined;
 
 try {
-    const data = fs.readFileSync('./db/config.json', 'utf8');
+    const data = fs.readFileSync(path.resolve() + '/src/db/config.json', 'utf8');
     config = JSON.parse(data);
 } catch (error) {
     console.error('Error reading the file:', error);
-}
-
-/**
- * Deprecated
- * @param stop_code
- * @param route_id
- * @returns {Promise<boolean>}
- */
-export async function validateBus(stop_code: string, route_id: string){
-    const db = openDb(config);
-    let stopContainsBus = false;
-
-    try {
-        // Gets a collection of busses that pass by the stop
-        const stopCollection = await getStopsAsGeoJSON({
-            stop_code,
-        });
-        // Some 'pretty' deconstruction to get the routes for the stop
-        const [feature] = stopCollection.features;
-        const validStops = feature.properties.routes;
-        // Checks to see if the `route_id` is in the routes array
-        stopContainsBus = validStops.some((bus: any) => bus.route_id === route_id)
-    } catch (error) {
-        console.log('Error fetching stop times:', error);
-    }
-
-    closeDb(db);
-    return stopContainsBus;
 }
 
 /**
@@ -68,6 +41,7 @@ export async function findBusArrivalTimes(stop_code: string) {
         });
     } catch (error) {
         console.error('Error fetching stop times:', error);
+        throw new Error('Was not able to fetch time.')
     }
 
     closeDb(db);
@@ -141,12 +115,14 @@ export async function stopsAwayFromDestination(stopCode: string, busCode: string
         // Gets the location of the bus
         const busLocation: Feature<Point> = turf.point([bus.longitude, bus.latitude]);
 
-        if (isNearBusStation(busLocation)) {
+        if (!isNearBusStation(busLocation)) {
+            console.log('Near the bus station.');
             return true;
         }
 
         // Checks to see if the bus is in between the stops - First and Last
         const isWithinRange = pointWithinStops(busLocation, busTurfLine ,rangeStops[0], rangeStops[5])
+
         if (!isWithinRange) {
             console.log("This bus is not within the range of the first and last stop. Skipping...\n");
             return true;
@@ -196,7 +172,7 @@ function isNearBusStation(busLocation: Feature<Point>): boolean {
 }
 
 function pointWithinStops(busLocation: Feature<Point>, pathway: Feature<LineString>, start: StopCombination, end: StopCombination): boolean {
-    const expandWidth: number = 6;
+    const expandWidth: number = 25;
 
     // Checks to see if the bus is in between the stops - Current and Previous
     const currStopLocation = turf.point([
@@ -219,5 +195,11 @@ function pointWithinStops(busLocation: Feature<Point>, pathway: Feature<LineStri
 
     const currToLastBuffer = turf.buffer(currToLastLine, expandWidth, { units: 'feet' });
 
+    fs.writeFileSync('./pathway.json', JSON.stringify(currToLastBuffer))
+
     return turf.booleanPointInPolygon(busLocation, currToLastBuffer);
+}
+
+export function add(num1: number, num2: number) {
+    return num1 + num2;
 }

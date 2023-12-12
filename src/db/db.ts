@@ -28,7 +28,7 @@ const updateGtfsData = async () => {
     }
 }
 
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule('*/0.25 * * * *', async () => {
     console.log('Updating GTFS data...');
     await updateGtfsData();
 });
@@ -55,6 +55,10 @@ app.listen(PORT, async () => {
 
     // Creates a new data.db
     console.log(`Server running on port ${PORT}`);
+});
+
+app.get('/', (_req, res) => {
+  res.send('Hello World!');
 });
 
 app.get('/estimatedTime/:stop_id', getEstimatedTime);
