@@ -1,4 +1,5 @@
 import { findBusArrivalTimes } from "./helpers.js";
+import { Arrival } from "../types";
 
 /**
  * Gets the estimated time from the bus that was passed through the parameters
@@ -9,8 +10,7 @@ import { findBusArrivalTimes } from "./helpers.js";
 export async function getEstimatedTime(req: any, res: any) {
   const { stop_id } = req.params;
 
-  await findBusArrivalTimes(stop_id);
-  console.log();
+  const arrivals: Arrival[] = await findBusArrivalTimes(stop_id);
 
-  res.send('Hello World!');
+  res.send(JSON.stringify(arrivals));
 }

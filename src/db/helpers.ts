@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { closeDb, getShapes, getStops, getStoptimes, getStopTimesUpdates, openDb } from "gtfs";
-import { Bus, Shape, Stop, StopCombination, Stoptime } from "../types";
+import { Arrival, Bus, Shape, Stop, StopCombination, Stoptime } from "../types";
 import { Feature, LineString, Point } from "@turf/turf";
 import * as turf from "@turf/turf";
 
@@ -19,32 +19,37 @@ try {
  * @param stop_code
  * @returns {Promise<void>}
  */
-export async function findBusArrivalTimes(stop_code: string) {
-    const db = openDb(config);
+export async function findBusArrivalTimes(stop_code: string): Promise<Arrival[]> {
+  const db = openDb(config);
 
-    try {
-        const [destinedStop] = getStops({
-            stop_code
-        });
+  const arrivals: Arrival[] = [];
 
-        const stopTimes = getStopTimesUpdates({
-            stop_id: destinedStop.stop_id,
-        });
+  try {
+    const [destinedStop] = getStops({
+      stop_code,
+    });
 
-        // Process the stopTimes as needed
-        stopTimes.map(bus => {
-            const [stopName] = getStops({
-                stop_id: bus.stop_id,
-            });
-            const time = new Date(bus.arrival_timestamp);
-            console.log(`${stopName.stop_name} - ${bus.route_id} will arrive at ${time.toLocaleTimeString()}`);
-        });
-    } catch (error) {
-        console.error('Error fetching stop times:', error);
-        throw new Error('Was not able to fetch time.')
-    }
+    console.log('Destined stop:', destinedStop);
 
-    closeDb(db);
+    const stopTimes = getStopTimesUpdates({
+      stop_id: destinedStop.stop_id,
+    });
+
+    // Process the stopTimes as needed
+    stopTimes.map(bus => {
+      arrivals.push({
+        route_id: bus.route_id,
+        arrival_timestamp: bus.arrival_timestamp,
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching stop times:', error);
+    throw new Error('Was not able to fetch time.');
+  }
+
+  closeDb(db);
+
+  return arrivals;
 }
 
 export async function stopsAwayFromDestination(stopCode: string, busCode: string): Promise<number> {
@@ -112,6 +117,8 @@ export async function stopsAwayFromDestination(stopCode: string, busCode: string
     vehicles.every((bus: Bus) => {
         console.log(`Bus ${bus.vehicle_id} - route ${bus.route_id} is at ${bus.latitude}, ${bus.longitude}`);
 
+      console.log('Bus', bus);
+
         // Gets the location of the bus
         const busLocation: Feature<Point> = turf.point([bus.longitude, bus.latitude]);
 
@@ -121,7 +128,8 @@ export async function stopsAwayFromDestination(stopCode: string, busCode: string
         }
 
         // Checks to see if the bus is in between the stops - First and Last
-        const isWithinRange = pointWithinStops(busLocation, busTurfLine ,rangeStops[0], rangeStops[5])
+        // Uses a larger width to ensure that the point of the bus is within the range
+        const isWithinRange = pointWithinStops(busLocation, busTurfLine ,rangeStops[0], rangeStops[5], 50);
 
         if (!isWithinRange) {
             console.log("This bus is not within the range of the first and last stop. Skipping...\n");
@@ -171,35 +179,31 @@ function isNearBusStation(busLocation: Feature<Point>): boolean {
     return true;
 }
 
-function pointWithinStops(busLocation: Feature<Point>, pathway: Feature<LineString>, start: StopCombination, end: StopCombination): boolean {
-    const expandWidth: number = 25;
+function pointWithinStops(busLocation: Feature<Point>, pathway: Feature<LineString>, start: StopCombination, end: StopCombination, expansion?: number): boolean {
+  const expandWidth: number = expansion ?? 25;
 
-    // Checks to see if the bus is in between the stops - Current and Previous
-    const currStopLocation = turf.point([
-        start.stop_lon,
-        start.stop_lat,
-    ]);
+  // Checks to see if the bus is in between the stops - Current and Previous
+  const currStopLocation = turf.point([
+    start.stop_lon,
+    start.stop_lat,
+  ]);
 
 
-    // Checks to see if the bus is between the first stop and last stop
-    const lastStopLocation = turf.point([
-        end.stop_lon,
-        end.stop_lat,
-    ]);
+  // Checks to see if the bus is between the first stop and last stop
+  const lastStopLocation = turf.point([
+    end.stop_lon,
+    end.stop_lat,
+  ]);
 
-    const currToLastLine = turf.lineSlice(
-      currStopLocation,
-      lastStopLocation,
-      pathway
-    );
+  const currToLastLine = turf.lineSlice(
+    currStopLocation,
+    lastStopLocation,
+    pathway
+  );
 
-    const currToLastBuffer = turf.buffer(currToLastLine, expandWidth, { units: 'feet' });
+  const currToLastBuffer = turf.buffer(currToLastLine, expandWidth, { units: 'feet' });
 
-    fs.writeFileSync('./pathway.json', JSON.stringify(currToLastBuffer))
+  fs.writeFileSync('./pathway.json', JSON.stringify(currToLastBuffer))
 
-    return turf.booleanPointInPolygon(busLocation, currToLastBuffer);
-}
-
-export function add(num1: number, num2: number) {
-    return num1 + num2;
+  return turf.booleanPointInPolygon(busLocation, currToLastBuffer);
 }

@@ -1,3 +1,8 @@
+export interface Arrival {
+    route_id: string,
+    arrival_timestamp: number,
+}
+
 export interface VehiclePosition {
     update_id: string,
     bearing: number,
