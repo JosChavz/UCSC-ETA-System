@@ -1,4 +1,4 @@
-import { findBusArrivalTimes } from "./helpers.js";
+import { findBusArrivalTimes, stopsAwayFromDestination } from "./helpers.js";
 import { Arrival } from "../types";
 
 /**
@@ -10,7 +10,31 @@ import { Arrival } from "../types";
 export async function getEstimatedTime(req: any, res: any) {
   const { stop_id } = req.params;
 
-  const arrivals: Arrival[] = await findBusArrivalTimes(stop_id);
+  let arrivals: Arrival[] = [];
 
+  try {
+    arrivals = await findBusArrivalTimes(stop_id);
+  } catch (e) {
+    console.error(e);
+  }
   res.send(JSON.stringify(arrivals));
+}
+
+/**
+ * Gets the number of stops away from the destination
+ * @param req
+ * @param res
+ */
+export async function getStopsAway(req: any, res: any) {
+  const { stop_id, bus_id } = req.params;
+
+  let stopsAway: number = -1;
+
+  try {
+    stopsAway = await stopsAwayFromDestination(stop_id, bus_id);
+  } catch (e) {
+    console.error(e);
+  }
+
+  res.send(JSON.stringify(stopsAway));
 }

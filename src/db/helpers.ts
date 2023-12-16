@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
-import { closeDb, getShapes, getStops, getStoptimes, getStopTimesUpdates, openDb } from "gtfs";
-import { Arrival, Bus, Shape, Stop, StopCombination, Stoptime } from "../types";
+import { closeDb, getStops, getStoptimes, getStopTimesUpdates, openDb } from "gtfs";
+import { Arrival, Bus, Stop, StopCombination, Stoptime } from "../types";
 import { Feature, LineString, Point } from "@turf/turf";
 import * as turf from "@turf/turf";
+import { busPathsGeoJSON } from "./db.js";
 
 let config: any = undefined;
 
@@ -24,28 +25,21 @@ export async function findBusArrivalTimes(stop_code: string): Promise<Arrival[]>
 
   const arrivals: Arrival[] = [];
 
-  try {
-    const [destinedStop] = getStops({
-      stop_code,
-    });
+  const [destinedStop] = getStops({
+    stop_code,
+  });
 
-    console.log('Destined stop:', destinedStop);
+  const stopTimes = getStopTimesUpdates({
+    stop_id: destinedStop.stop_id,
+  });
 
-    const stopTimes = getStopTimesUpdates({
-      stop_id: destinedStop.stop_id,
+  // Process the stopTimes as needed
+  stopTimes.map(bus => {
+    arrivals.push({
+      route_id: bus.route_id,
+      arrival_timestamp: bus.arrival_timestamp,
     });
-
-    // Process the stopTimes as needed
-    stopTimes.map(bus => {
-      arrivals.push({
-        route_id: bus.route_id,
-        arrival_timestamp: bus.arrival_timestamp,
-      });
-    });
-  } catch (error) {
-    console.error('Error fetching stop times:', error);
-    throw new Error('Was not able to fetch time.');
-  }
+  });
 
   closeDb(db);
 
@@ -98,20 +92,7 @@ export async function stopsAwayFromDestination(stopCode: string, busCode: string
       .reverse();
     /**** END HERE *****/
 
-    /*** MOVE THIS TO ITS OWN DICTIONARY LATER ***/
-      // Get the shape points for the route
-    const busRoutePoints: Shape[] = getShapes({
-          shape_id: vehicles[0].shape_id,
-      }) as Shape[];
-
-    // Save as a line using turf
-    const busTurfLine: Feature<LineString> = turf.lineString(
-      busRoutePoints.map((point: Shape) => [
-          point.shape_pt_lon,
-          point.shape_pt_lat,
-      ])
-    );
-    /******* END HERE ******/
+    const busTurfLine: Feature<LineString> = busPathsGeoJSON[vehicles[0].route_id][vehicles[0].shape_id];
 
     // Loop through the buses to know their location ETA
     vehicles.every((bus: Bus) => {
