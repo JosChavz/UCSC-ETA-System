@@ -4,11 +4,10 @@ import {
   closeDb,
   getShapes,
   getStops,
-  getStoptimes,
   getStopTimesUpdates,
   openDb,
 } from 'gtfs';
-import { Arrival, Bus, Shape, Stop, StopCombination, Stoptime } from '../types';
+import { Arrival, Bus, Shape, StopCombination } from '../types';
 import { Feature, LineString, Point } from '@turf/turf';
 import * as turf from '@turf/turf';
 import { busPathsGeoJSON } from './db.js';
@@ -80,22 +79,18 @@ export async function stopsAwayFromDestination(
   }
 
   vehicles.forEach((bus: Bus) => {
-    /*** MOVE THIS TO ITS OWN DICTIONARY LATER ***/
     // Get the stops for the route
-    let stops: StopCombination[] = [];
-    const stopTimes: Stoptime[] = getStoptimes({
-      trip_id: bus.trip_id,
-    }) as Stoptime[];
-
-    stopTimes.forEach((stopTime: Stoptime) => {
-      const [stop] = getStops({
-        stop_id: stopTime.stop_id,
-      }) as Stop[];
-      stops.push({
-        ...stopTime,
-        ...stop,
-      });
-    });
+    let stops: StopCombination[] = db
+      .prepare(
+        'SELECT *\n' +
+          'FROM stops\n' +
+          'INNER JOIN (\n' +
+          '    SELECT *\n' +
+          '    FROM stop_times\n' +
+          '    WHERE trip_id = ?\n' +
+          ') AS unique_stop_times ON stops.stop_id = unique_stop_times.stop_id;'
+      )
+      .all(bus.trip_id);
 
     // Finds the index of the current stop
     const currentStopIndex: number = stops.findIndex(
@@ -105,7 +100,6 @@ export async function stopsAwayFromDestination(
     const rangeStops: StopCombination[] = stops
       .slice(currentStopIndex - 5, currentStopIndex + 1)
       .reverse();
-    /**** END HERE *****/
 
     // The bus path is not stored inside the cache
     if (!busPathsGeoJSON[bus.route_id]) {
@@ -115,12 +109,6 @@ export async function stopsAwayFromDestination(
 
     const busTurfLine: Feature<LineString> =
       busPathsGeoJSON[bus.route_id][bus.shape_id];
-
-    console.log(
-      `Bus ${bus.vehicle_id} - route ${bus.route_id} is at ${bus.latitude}, ${bus.longitude}`
-    );
-
-    console.log('Bus', bus);
 
     // Gets the location of the bus
     const busLocation: Feature<Point> = turf.point([
