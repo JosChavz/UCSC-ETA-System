@@ -1,5 +1,8 @@
-import { findBusArrivalTimes, stopsAwayFromDestination } from "./helpers.js";
-import { Arrival } from "../types";
+import {
+  findBusArrivalTimes,
+  stopsAwayFromDestination,
+} from './endpointHelper.js';
+import { Arrival } from '../types';
 
 /**
  * Gets the estimated time from the bus that was passed through the parameters
@@ -26,9 +29,9 @@ export async function getEstimatedTime(req: any, res: any) {
  * @param res
  */
 export async function getStopsAway(req: any, res: any) {
-  const { stop_id, bus_id } = req.params;
-
-  let stopsAway: number = -1;
+  const { stop_id } = req.params;
+  const { bus_id } = req.query;
+  let stopsAway: number[] = [];
 
   try {
     stopsAway = await stopsAwayFromDestination(stop_id, bus_id);
